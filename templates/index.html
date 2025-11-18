@@ -84,7 +84,6 @@
     <div id="status"></div>
 </div>
 
-
 <script>
 async function processLink() {
     let url = document.getElementById("zipUrl").value.trim();
@@ -110,17 +109,15 @@ async function processLink() {
     }
 
     let taskId = result.task_id;
-
     document.getElementById("status").innerHTML = "⏳ Processing PSD layers...";
 
-    // POLLING STATUS
+    // POLLING
     let check = setInterval(async () => {
         let statusRes = await fetch(`/status/${taskId}`);
         let statusData = await statusRes.json();
 
         if (statusData.status === "done") {
             clearInterval(check);
-
             document.getElementById("status").innerHTML =
                 `✅ Completed! <br><br>
                  <a class="download-link" href="/download/${taskId}">⬇ Download Processed ZIP</a>`;
@@ -128,11 +125,9 @@ async function processLink() {
 
         if (statusData.status === "failed") {
             clearInterval(check);
-
-            document.getElementById("status").innerHTML =
+            document.getElementById("status").innerHTML = 
                 "❌ Error: " + statusData.error;
         }
-
     }, 1500);
 }
 </script>
