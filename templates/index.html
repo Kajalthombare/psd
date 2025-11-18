@@ -1,17 +1,85 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>PSD Extractor</title>
+    <meta charset="UTF-8">
+    <title>PSD Layer Extractor</title>
     <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f2f2f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 420px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        a.download-link {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+
+        a.download-link:hover {
+            background: #1e7e34;
+        }
+    </style>
 </head>
+
 <body>
 
 <div class="container">
     <h1>🎨 PSD Layer Extractor</h1>
 
-    <h3>Upload ZIP via URL</h3>
-    <input type="text" id="zipUrl" placeholder="Paste Google Drive / Dropbox / URL to ZIP" style="width:100%; padding:10px;">
-    <button onclick="processLink()">Process</button>
+    <p>Paste the link to your ZIP file (Google Drive / Dropbox / Direct URL)</p>
+
+    <input type="text" id="zipUrl" placeholder="Paste ZIP download link here">
+
+    <button onclick="processLink()">Process ZIP</button>
 
     <div id="status"></div>
 </div>
@@ -19,45 +87,53 @@
 
 <script>
 async function processLink() {
-    const url = document.getElementById("zipUrl").value;
+    let url = document.getElementById("zipUrl").value.trim();
+
     if (!url) {
-        alert("Please paste a ZIP file link");
+        alert("Please paste a valid ZIP link.");
         return;
     }
 
     document.getElementById("status").innerHTML = "⏳ Downloading ZIP...";
 
-    const res = await fetch("/process_url", {
+    let response = await fetch("/process_url", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ url: url })
     });
 
-    const data = await res.json();
+    let result = await response.json();
 
-    if (data.error) {
-        document.getElementById("status").innerHTML = "❌ " + data.error;
+    if (result.error) {
+        document.getElementById("status").innerHTML = "❌ " + result.error;
         return;
     }
 
-    const taskId = data.task_id;
+    let taskId = result.task_id;
 
-    document.getElementById("status").innerHTML = "⏳ Processing...";
+    document.getElementById("status").innerHTML = "⏳ Processing PSD layers...";
 
-    const interval = setInterval(async () => {
-        const s = await fetch(`/status/${taskId}`);
-        const j = await s.json();
+    // POLLING STATUS
+    let check = setInterval(async () => {
+        let statusRes = await fetch(`/status/${taskId}`);
+        let statusData = await statusRes.json();
 
-        if (j.status === "done") {
-            clearInterval(interval);
+        if (statusData.status === "done") {
+            clearInterval(check);
+
             document.getElementById("status").innerHTML =
-                `✅ Done! <a href="/download/${taskId}">Download ZIP</a>`;
+                `✅ Completed! <br><br>
+                 <a class="download-link" href="/download/${taskId}">⬇ Download Processed ZIP</a>`;
         }
-        if (j.status === "failed") {
-            clearInterval(interval);
-            document.getElementById("status").innerHTML = "❌ Failed: " + j.error;
+
+        if (statusData.status === "failed") {
+            clearInterval(check);
+
+            document.getElementById("status").innerHTML =
+                "❌ Error: " + statusData.error;
         }
-    }, 2000);
+
+    }, 1500);
 }
 </script>
 
