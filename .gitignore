@@ -1,4 +1,13 @@
+.ipynb_checkpoints/
 __pycache__/
+uploads/
+outputs/
+work/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/__pycache__/
 uploads/
 outputs/
 work/
