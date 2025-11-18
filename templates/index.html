@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>PSD Layer Extractor</title>
+    <title>PSD Extractor</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -9,13 +9,57 @@
 <div class="container">
     <h1>🎨 PSD Layer Extractor</h1>
 
-    <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" required accept=".psd" />
-        <br>
-        <button type="submit">Upload & Process</button>
-    </form>
+    <h3>Upload ZIP via URL</h3>
+    <input type="text" id="zipUrl" placeholder="Paste Google Drive / Dropbox / URL to ZIP" style="width:100%; padding:10px;">
+    <button onclick="processLink()">Process</button>
 
+    <div id="status"></div>
 </div>
+
+
+<script>
+async function processLink() {
+    const url = document.getElementById("zipUrl").value;
+    if (!url) {
+        alert("Please paste a ZIP file link");
+        return;
+    }
+
+    document.getElementById("status").innerHTML = "⏳ Downloading ZIP...";
+
+    const res = await fetch("/process_url", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ url: url })
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+        document.getElementById("status").innerHTML = "❌ " + data.error;
+        return;
+    }
+
+    const taskId = data.task_id;
+
+    document.getElementById("status").innerHTML = "⏳ Processing...";
+
+    const interval = setInterval(async () => {
+        const s = await fetch(`/status/${taskId}`);
+        const j = await s.json();
+
+        if (j.status === "done") {
+            clearInterval(interval);
+            document.getElementById("status").innerHTML =
+                `✅ Done! <a href="/download/${taskId}">Download ZIP</a>`;
+        }
+        if (j.status === "failed") {
+            clearInterval(interval);
+            document.getElementById("status").innerHTML = "❌ Failed: " + j.error;
+        }
+    }, 2000);
+}
+</script>
 
 </body>
 </html>
