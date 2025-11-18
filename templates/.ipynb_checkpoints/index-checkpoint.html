@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PSD Layer Extractor</title>
+    <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f2f2f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 420px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        a.download-link {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+
+        a.download-link:hover {
+            background: #1e7e34;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>🎨 PSD Layer Extractor</h1>
+
+    <p>Paste the link to your ZIP file (Google Drive / Dropbox / Direct URL)</p>
+
+    <input type="text" id="zipUrl" placeholder="Paste ZIP download link here">
+
+    <button onclick="processLink()">Process ZIP</button>
+
+    <div id="status"></div>
+</div>
+
+
+<script>
+async function processLink() {
+    let url = document.getElementById("zipUrl").value.trim();
+
+    if (!url) {
+        alert("Please paste a valid ZIP link.");
+        return;
+    }
+
+    document.getElementById("status").innerHTML = "⏳ Downloading ZIP...";
+
+    let response = await fetch("/process_url", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ url: url })
+    });
+
+    let result = await response.json();
+
+    if (result.error) {
+        document.getElementById("status").innerHTML = "❌ " + result.error;
+        return;
+    }
+
+    let taskId = result.task_id;
+
+    document.getElementById("status").innerHTML = "⏳ Processing PSD layers...";
+
+    // POLLING STATUS
+    let check = setInterval(async () => {
+        let statusRes = await fetch(`/status/${taskId}`);
+        let statusData = await statusRes.json();
+
+        if (statusData.status === "done") {
+            clearInterval(check);
+
+            document.getElementById("status").innerHTML =
+                `✅ Completed! <br><br>
+                 <a class="download-link" href="/download/${taskId}">⬇ Download Processed ZIP</a>`;
+        }
+
+        if (statusData.status === "failed") {
+            clearInterval(check);
+
+            document.getElementById("status").innerHTML =
+                "❌ Error: " + statusData.error;
+        }
+
+    }, 1500);
+}
+</script>
+
+</body>
+</html>
